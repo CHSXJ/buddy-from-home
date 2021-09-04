@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import _ from 'lodash';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { getDatabase, ref, onValue, update } from 'firebase/database';
 
 class PickingArea extends Component {
 
@@ -8,20 +8,25 @@ class PickingArea extends Component {
     super(props);
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
+    this.pickBuddy = this.pickBuddy.bind(this);
     this.state = {
       name: '',
       players: [],
       showWarning: false,
       showBuddy: false,
       secretBuddy: '',
+      playersGotBuddy: []
     };
 
-    var database = getDatabase(this.props.app);
-    var starCountRef = ref(database, 'players');
+    let database = getDatabase(this.props.app);
+    let starCountRef = ref(database, 'players');
     onValue(starCountRef, (snapshot) => {
       const data = snapshot.val();
+      var playersGotBuddyList = data.filter(p => (p.isGotBuddy == true));
+      playersGotBuddyList = playersGotBuddyList.map(p => p.name);
       this.setState({
-        players: data
+        players: data,
+        playersGotBuddy: playersGotBuddyList
       });
     });
 
@@ -37,19 +42,41 @@ class PickingArea extends Component {
     e.preventDefault();
     let players = this.state.players;
     let enterName = this.state.name;
+    let allowed = !(players.some(p => (p.name === enterName && p.isGotBuddy == false) ))
     this.setState({
-      showWarning: !(players.some(p => (p.name === enterName && p.isGotBuddy == false) ))
+      showWarning: allowed,
+      showBuddy: !allowed
     }, () => {
       //create list of tickets (filter the player out)
-      if(!this.state.showWarning) {
-        var tickets = players.filter(p => (p.name != enterName) );
-        tickets = tickets.filter(p => (p.isPicked == false));
-        let secretNumber = Math.floor(Math.random()* tickets.length);
-        this.setState({
-          showBuddy: true,
-          secretBuddy: tickets[secretNumber].name
-        });
+      if(!allowed) {
+        this.pickBuddy(players, enterName);
       }
+    });
+  }
+
+  pickBuddy(players, enterName) {
+    var tickets = players.filter(p => (p.name != enterName) );
+    tickets = tickets.filter(p => (p.isPicked == false));
+    let secretNumber = Math.floor(Math.random()* tickets.length);
+    let secretBuddy = tickets[secretNumber].name;
+    this.setState({
+      showBuddy: true,
+      secretBuddy: secretBuddy
+    }, () => {
+
+      let database = getDatabase(this.props.app);
+
+      let playerIndex = players.findIndex(p => p.name === enterName);
+      update(ref(database, 'players/' + playerIndex), {
+        isGotBuddy: true,
+        buddy: secretBuddy
+      });
+
+      let buddyIndex = players.findIndex(p => p.name === secretBuddy);
+      update(ref(database, 'players/' + buddyIndex), {
+        isPicked: true
+      });
+
     });
   }
 
@@ -77,6 +104,7 @@ class PickingArea extends Component {
                   </div>
                 </form>
               </div>
+              {(this.state.playersGotBuddy.length > 0) && <WhoGotBuddy buddy={this.state.playersGotBuddy} />}
               {this.state.showWarning && <NotAllowedWarning />}
               {this.state.showBuddy && <AnounceBuddy buddy={this.state.secretBuddy} />}
             </div>
@@ -89,7 +117,7 @@ class PickingArea extends Component {
 }
 const NotAllowedWarning = () => (
   <div class="box" >
-    <p class="has-text-danger is-size-3">*** You are not allowed ***</p>
+    <p class="has-text-danger">You are not allowed or already got your buddy.</p>
   </div>
 )
 
@@ -99,4 +127,12 @@ const AnounceBuddy = ({buddy}) => (
     <p class="is-size-3 has-background-primary-light has-text-primary">{buddy}</p>
   </div>
 )
+
+const WhoGotBuddy = ({buddy}) => (
+  <div>
+  <p class="has-text-info">{buddy.join(', ')} already got buddy.</p>
+  <p class="has-text-info">———</p>
+  </div>
+)
+
 export default PickingArea

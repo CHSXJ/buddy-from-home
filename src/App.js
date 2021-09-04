@@ -24,7 +24,7 @@ class App extends Component {
       <div>
         <div id="navbarMenu" class="navbar-menu">
           <div className="container">
-            <Header title="Find Your Buddy" />
+            <Header title="" />
           </div>
           <div class="navbar-end">
               <span class="navbar-item">
