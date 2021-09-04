@@ -1,38 +1,30 @@
 import React, {Component} from 'react';
 import _ from 'lodash';
+import { getDatabase, ref, onValue } from 'firebase/database';
 
 class PickingArea extends Component {
 
   constructor(props){
     super(props);
     this.onChange = this.onChange.bind(this);
-    // this.onKeyup = this.onKeyup.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
     this.state = {
       name: '',
-      players: []
+      players: [],
+      showWarning: false,
+      showBuddy: false,
+      secretBuddy: '',
     };
 
-    let app = this.props.db.database().ref('players');
-    app.on('value', snapshot => {
-      this.getData(snapshot.val());
+    var database = getDatabase(this.props.app);
+    var starCountRef = ref(database, 'players');
+    onValue(starCountRef, (snapshot) => {
+      const data = snapshot.val();
+      this.setState({
+        players: data
+      });
     });
 
-  }
-
-  getData(values){
-    let messagesVal = values;
-    let messages = _(messagesVal)
-                    .keys()
-                    .map(messageKey => {
-                      let cloned = _.clone(messagesVal[messageKey]);
-                      cloned.key = messageKey;
-                      return cloned;
-                    }).value();
-    this.setState({
-      players: messages
-    });
-    console.log("Players: " + this.state.players);
   }
 
   onChange(evt) {
@@ -43,7 +35,22 @@ class PickingArea extends Component {
 
   onSubmit(e) {
     e.preventDefault();
-    console.log(this.state.name);
+    let players = this.state.players;
+    let enterName = this.state.name;
+    this.setState({
+      showWarning: !(players.some(p => (p.name === enterName && p.isGotBuddy == false) ))
+    }, () => {
+      //create list of tickets (filter the player out)
+      if(!this.state.showWarning) {
+        var tickets = players.filter(p => (p.name != enterName) );
+        tickets = tickets.filter(p => (p.isPicked == false));
+        let secretNumber = Math.floor(Math.random()* tickets.length);
+        this.setState({
+          showBuddy: true,
+          secretBuddy: tickets[secretNumber].name
+        });
+      }
+    });
   }
 
   render() {
@@ -56,7 +63,7 @@ class PickingArea extends Component {
                   Enter your name
               </h1>
               <h2 class="subtitle">
-                  *** to avoid picking yourself ***
+                  to avoid pick up yourself
               </h2>
               <div class="box">
                 <form>
@@ -70,6 +77,8 @@ class PickingArea extends Component {
                   </div>
                 </form>
               </div>
+              {this.state.showWarning && <NotAllowedWarning />}
+              {this.state.showBuddy && <AnounceBuddy buddy={this.state.secretBuddy} />}
             </div>
           </div>
       </div>
@@ -78,4 +87,16 @@ class PickingArea extends Component {
   }
 
 }
+const NotAllowedWarning = () => (
+  <div class="box" >
+    <p class="has-text-danger is-size-3">*** You are not allowed ***</p>
+  </div>
+)
+
+const AnounceBuddy = ({buddy}) => (
+  <div class="box" >
+    <p>Your Secret Buddy is ...</p>
+    <p class="is-size-3 has-background-primary-light has-text-primary">{buddy}</p>
+  </div>
+)
 export default PickingArea

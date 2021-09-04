@@ -6,6 +6,7 @@ import { initializeApp } from "firebase/app";
 const firebaseConfig = {
   apiKey: "AIzaSyAtJg4QwXdm2MKRxt9tb9ATlrm6ISd8Id8",
   authDomain: "secret-buddy-d7ca0.firebaseapp.com",
+  databaseURL: "https://secret-buddy-d7ca0-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "secret-buddy-d7ca0",
   storageBucket: "secret-buddy-d7ca0.appspot.com",
   messagingSenderId: "715396894708",
@@ -14,7 +15,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const firebaseApp = initializeApp(firebaseConfig);
 
 class App extends Component {
 
@@ -37,7 +38,7 @@ class App extends Component {
           </div>
         </div>
 
-        <PickingArea />      
+        <PickingArea app={firebaseApp} />      
 
       </div>
     );
