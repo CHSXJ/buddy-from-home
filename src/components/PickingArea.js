@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import _ from 'lodash';
+import live from '../assets/flow.gif';
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 
 class PickingArea extends Component {
@@ -130,8 +130,15 @@ const AnounceBuddy = ({buddy}) => (
 
 const WhoGotBuddy = ({buddy}) => (
   <div>
-  <p class="has-text-info">{buddy.join(', ')} already got buddy.</p>
-  <p class="has-text-info">———</p>
+    <div class="columns is-mobile is-vcentered">
+      <div class="column">
+        <img width="100" src={live} alt="live" />
+      </div>
+      <div class="column is-four-fifths">
+        <p class="has-text-info has-text-left is-italic">{buddy.join(', ')} already got buddy.</p>
+        
+      </div>
+    </div>
   </div>
 )
 

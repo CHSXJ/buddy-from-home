@@ -28,9 +28,9 @@ class App extends Component {
           </div>
           <div class="navbar-end">
               <span class="navbar-item">
-                  <a class="button is-outlined" href="#">
+                  <a class="button is-outlined" href="https://github.com/CHSXJ/buddy-from-home">
                       <span class="icon">
-                          <i class="fa fa-github"></i>
+                        <i class="fab fa-github"></i>
                       </span>
                       <span>Source on Github</span>
                   </a>
