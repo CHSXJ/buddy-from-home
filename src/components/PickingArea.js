@@ -15,15 +15,23 @@ class PickingArea extends Component {
       showWarning: false,
       showBuddy: false,
       secretBuddy: '',
-      playersGotBuddy: []
+      playersGotBuddy: [],
+      outOfTickets: false,
     };
 
     let database = getDatabase(this.props.app);
     let starCountRef = ref(database, 'players');
     onValue(starCountRef, (snapshot) => {
       const data = snapshot.val();
-      var playersGotBuddyList = data.filter(p => (p.isGotBuddy == true));
-      playersGotBuddyList = playersGotBuddyList.map(p => p.name);
+      var playersGotBuddyList = [];
+      if(data && data.length > 1) {
+        playersGotBuddyList = data.filter(p => (p.isGotBuddy === true));
+        playersGotBuddyList = playersGotBuddyList.map(p => p.name);
+        this.setState({outOfTickets: false});
+      } else {
+        this.setState({outOfTickets: true});
+      }
+      
       this.setState({
         players: data,
         playersGotBuddy: playersGotBuddyList
@@ -40,44 +48,50 @@ class PickingArea extends Component {
 
   onSubmit(e) {
     e.preventDefault();
-    let players = this.state.players;
-    let enterName = this.state.name;
-    let allowed = !(players.some(p => (p.name === enterName && p.isGotBuddy == false) ))
+    var players = this.state.players;
+    var enterName = this.state.name;
+    var notAllowed = !(players.some(p => (p.name === enterName && p.isGotBuddy === false) ))
     this.setState({
-      showWarning: allowed,
-      showBuddy: !allowed
+      showWarning: notAllowed,
+      showBuddy: !notAllowed
     }, () => {
       //create list of tickets (filter the player out)
-      if(!allowed) {
+      if(!notAllowed && players.length > 1) {
         this.pickBuddy(players, enterName);
+        this.setState({outOfTickets: false});
       }
     });
   }
 
   pickBuddy(players, enterName) {
-    var tickets = players.filter(p => (p.name != enterName) );
-    tickets = tickets.filter(p => (p.isPicked == false));
+    var tickets = players.filter(p => (p.name !== enterName) );
+    tickets = tickets.filter(p => (p.isPicked === false));
     let secretNumber = Math.floor(Math.random()* tickets.length);
     let secretBuddy = tickets[secretNumber].name;
-    this.setState({
-      showBuddy: true,
-      secretBuddy: secretBuddy
-    }, () => {
+    
+    let playerIndex = players.findIndex(p => p.name === enterName);
+    let buddyIndex = players.findIndex(p => p.name === secretBuddy);
 
+    if(!players[buddyIndex].isPicked && !players[players.isGotBuddy]) {
       let database = getDatabase(this.props.app);
-
-      let playerIndex = players.findIndex(p => p.name === enterName);
+      update(ref(database, 'players/' + buddyIndex), {
+        isPicked: true
+      });
       update(ref(database, 'players/' + playerIndex), {
         isGotBuddy: true,
         buddy: secretBuddy
       });
-
-      let buddyIndex = players.findIndex(p => p.name === secretBuddy);
-      update(ref(database, 'players/' + buddyIndex), {
-        isPicked: true
+      this.setState({
+        showBuddy: true,
+        secretBuddy: secretBuddy
       });
-
-    });
+    } else {
+      this.setState({
+        showWarning: true,
+        showBuddy: false
+      });
+    }
+    
   }
 
   render() {
@@ -104,6 +118,7 @@ class PickingArea extends Component {
                   </div>
                 </form>
               </div>
+              {(this.state.outOfTickets) && <OutOfTickets />}
               {(this.state.playersGotBuddy.length > 0) && <WhoGotBuddy buddy={this.state.playersGotBuddy} />}
               {this.state.showWarning && <NotAllowedWarning />}
               {this.state.showBuddy && <AnounceBuddy buddy={this.state.secretBuddy} />}
@@ -118,6 +133,12 @@ class PickingArea extends Component {
 const NotAllowedWarning = () => (
   <div class="box" >
     <p class="has-text-danger">You are not allowed or already got your buddy.</p>
+  </div>
+)
+
+const OutOfTickets = () => (
+  <div class="box" >
+    <p class="has-text-danger">[Out of Tickets] Everybody got their buddy.</p>
   </div>
 )
 
